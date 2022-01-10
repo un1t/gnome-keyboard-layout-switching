@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Exec=/home/ilya/workspace/gnome-keyboard-layout-switching/venv/bin/python /home/ilya/workspace/gnome-keyboard-layout-switching/main.py
+Name=Gnome Keyboard Layout Switch
+Comment=
