@@ -2,6 +2,8 @@ xlib
 # https://stackoverflow.com/questions/26678457/how-do-i-install-python3-gi-within-virtualenv/43808204#43808204
 vext
 vext.gi
+# sudo apt install python3-gi libcairo2-dev libgirepository1.0-dev
+pygobject
 pydbus
 
 # dev
