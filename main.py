@@ -1,3 +1,4 @@
+import json
 from Xlib.display import Display
 from Xlib import X
 from Xlib.ext import record
@@ -12,41 +13,52 @@ class Keys:
     shift_r = 62
 
 
-display = Display()  # get current display
-bus = SessionBus()
-pressed = set()
+def gnome_shell_eval(code):
+    remote_object = bus.get("org.gnome.Shell", "/org/gnome/Shell")
+    result = remote_object.Eval(code)
+    if result[1] != "":
+        return json.loads(result[1])
 
 
-def switch_to(index):
-    remote_object = bus.get('org.gnome.Shell', '/org/gnome/Shell')
-    remote_object.Eval(f"imports.ui.status.keyboard.getInputSourceManager().inputSources[{index}].activate()")
+def get_input_sources():
+    return gnome_shell_eval(
+        f"imports.ui.status.keyboard.getInputSourceManager().inputSources"
+    )
 
 
-def get_current_index():
-    remote_object = bus.get('org.gnome.Shell', '/org/gnome/Shell')
-    result = remote_object.Eval("imports.ui.status.keyboard.getInputSourceManager().currentSource.index")
-    return int(result[1])
+def activate_input_source(index):
+    gnome_shell_eval(
+        f"imports.ui.status.keyboard.getInputSourceManager().inputSources[{index}].activate()"
+    )
+
+
+def get_current_input_source_index():
+    return gnome_shell_eval(
+        "imports.ui.status.keyboard.getInputSourceManager().currentSource.index"
+    )
+
+
+def activate_next_input_source(indexes):
+    index = get_current_input_source_index()
+    try:
+        pos = indexes.index(index)
+        next_index = indexes[pos + 1]
+    except (ValueError, IndexError):
+        next_index = indexes[0]
+    activate_input_source(next_index)
 
 
 def func1():
-    index = get_current_index()
-    if index == 0:
-        switch_to(1)
-    else:
-        switch_to(0)
+    activate_next_input_source(main_indexes)
 
 
 def func2():
-    index = get_current_index()
-    if index == 2:
-        switch_to(3)
-    else:
-        switch_to(2)
+    activate_next_input_source(other_indexes)
 
 
 bindings = {
     frozenset([Keys.alt_l, Keys.shift_l]): func1,
-    frozenset([Keys.alt_r, Keys.shift_r]): func2
+    frozenset([Keys.alt_r, Keys.shift_r]): func2,
 }
 
 
@@ -68,6 +80,27 @@ def handler(reply):
         elif event.type == X.KeyRelease:
             if event.detail in pressed:
                 pressed.remove(event.detail)
+
+
+display = Display()  # get current display
+bus = SessionBus()
+pressed = set()
+main_langs = ["en", "ru"] # TODO: command line arguments
+main_indexes = []
+other_indexes = []
+
+
+input_sources = get_input_sources()
+for val in input_sources.values():
+    lang = val["_shortName"]
+    index = val["index"]
+    if lang in main_langs:
+        main_indexes.append(index)
+    else:
+        other_indexes.append(index)
+
+    main_indexes.sort()
+    other_indexes.sort()
 
 
 # Monitor keypress and button press
