@@ -1,0 +1,9 @@
+wheel
+xlib
+# https://stackoverflow.com/questions/26678457/how-do-i-install-python3-gi-within-virtualenv/43808204#43808204
+vext
+vext.gi
+pydbus
+
+# dev
+ipdb
