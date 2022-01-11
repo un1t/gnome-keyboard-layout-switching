@@ -15,3 +15,4 @@ clean:
 
 autostart:
 	cp gnome-keyboard-layout-switch.desktop ~/.config/autostart/
+	sed -i 's#{dir}#'`pwd`'#g' ~/.config/autostart/gnome-keyboard-layout-switch.desktop
