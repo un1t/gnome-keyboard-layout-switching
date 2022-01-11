@@ -1,4 +1,5 @@
 import json
+from typing import OrderedDict
 from Xlib.display import Display
 from Xlib import X
 from Xlib.ext import record
@@ -21,9 +22,26 @@ def gnome_shell_eval(code):
 
 
 def get_input_sources():
-    return gnome_shell_eval(
+    result = gnome_shell_eval(
         f"imports.ui.status.keyboard.getInputSourceManager().inputSources"
     )
+    input_sources = sorted(result.values(), key=lambda v: v["index"])
+    return OrderedDict(
+        [
+            (input_source["_shortName"], input_source["index"])
+            for input_source in input_sources
+        ]
+    )
+
+def get_splitted_indexes():
+    primary = []
+    secondary = []
+    for lang, index in get_input_sources().items():
+        if lang in primary_langs:
+            primary.append(index)
+        else:
+            secondary.append(index)
+    return primary, secondary
 
 
 def activate_input_source(index):
@@ -48,17 +66,19 @@ def activate_next_input_source(indexes):
     activate_input_source(next_index)
 
 
-def func1():
-    activate_next_input_source(main_indexes)
+def activate_next_primary_input_source():
+    primary_indexes = get_splitted_indexes()[0]
+    activate_next_input_source(primary_indexes)
 
 
-def func2():
-    activate_next_input_source(other_indexes)
+def activate_next_secondary_input_source():
+    secondary_indexes = get_splitted_indexes()[1]
+    activate_next_input_source(secondary_indexes)
 
 
 bindings = {
-    frozenset([Keys.alt_l, Keys.shift_l]): func1,
-    frozenset([Keys.alt_r, Keys.shift_r]): func2,
+    frozenset([Keys.alt_l, Keys.shift_l]): activate_next_primary_input_source,
+    frozenset([Keys.alt_r, Keys.shift_r]): activate_next_secondary_input_source,
 }
 
 
@@ -85,22 +105,7 @@ def handler(reply):
 display = Display()  # get current display
 bus = SessionBus()
 pressed = set()
-main_langs = ["en", "ru"] # TODO: command line arguments
-main_indexes = []
-other_indexes = []
-
-
-input_sources = get_input_sources()
-for val in input_sources.values():
-    lang = val["_shortName"]
-    index = val["index"]
-    if lang in main_langs:
-        main_indexes.append(index)
-    else:
-        other_indexes.append(index)
-
-    main_indexes.sort()
-    other_indexes.sort()
+primary_langs = ["en", "ru"]  # TODO: command line arguments
 
 
 # Monitor keypress and button press
