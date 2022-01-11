@@ -1,4 +1,7 @@
+import argparse
 import json
+import sys
+import re
 from typing import OrderedDict
 from Xlib.display import Display
 from Xlib import X
@@ -32,6 +35,7 @@ def get_input_sources():
             for input_source in input_sources
         ]
     )
+
 
 def get_splitted_indexes():
     primary = []
@@ -105,30 +109,61 @@ def handler(reply):
 display = Display()  # get current display
 bus = SessionBus()
 pressed = set()
-primary_langs = ["en", "ru"]  # TODO: command line arguments
+primary_langs = []
 
 
-# Monitor keypress and button press
-ctx = display.record_create_context(
-    0,
-    [record.AllClients],
-    [
-        {
-            "core_requests": (0, 0),
-            "core_replies": (0, 0),
-            "ext_requests": (0, 0, 0, 0),
-            "ext_replies": (0, 0, 0, 0),
-            "delivered_events": (0, 0),
-            "device_events": (X.KeyReleaseMask, X.ButtonReleaseMask),
-            "errors": (0, 0),
-            "client_started": False,
-            "client_died": False,
-        }
-    ],
-)
-display.record_enable_context(ctx, handler)
-display.record_free_context(ctx)
+def init():
+    global primary_langs
 
-while 1:
-    # Infinite wait, doesn't do anything as no events are grabbed
-    event = display.screen().root.display.next_event()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-p",
+        "--primary",
+        metavar="LANGUAGES",
+        type=str,
+        help='Comma-separated primary languages, e.g. "en,ru" ',
+    )
+    args = parser.parse_args(sys.argv[1:])
+    if args.primary:
+        primary_langs = re.split('\s*,\s*', args.primary)
+        unexisted_langs = set(primary_langs) - set(get_input_sources().keys())
+        if unexisted_langs:
+            print(
+                "Error. Input sources for the following laguages are not exists: {}.".format(
+                    ", ".join(unexisted_langs)
+                ),
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"Provided languages ({str(primary_langs).strip('[]')}) are used as primary.")
+    else:
+        primary_langs = list(get_input_sources().keys())[:2]
+        print(f"First 2 languages ({str(primary_langs).strip('[]')}) are used as primary.")
+
+    # Monitor keypress and button press
+    ctx = display.record_create_context(
+        0,
+        [record.AllClients],
+        [
+            {
+                "core_requests": (0, 0),
+                "core_replies": (0, 0),
+                "ext_requests": (0, 0, 0, 0),
+                "ext_replies": (0, 0, 0, 0),
+                "delivered_events": (0, 0),
+                "device_events": (X.KeyReleaseMask, X.ButtonReleaseMask),
+                "errors": (0, 0),
+                "client_started": False,
+                "client_died": False,
+            }
+        ],
+    )
+    display.record_enable_context(ctx, handler)
+    display.record_free_context(ctx)
+
+
+if __name__ == "__main__":
+    init()
+    while 1:
+        # Infinite wait, doesn't do anything as no events are grabbed
+        event = display.screen().root.display.next_event()
