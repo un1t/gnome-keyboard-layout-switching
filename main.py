@@ -83,10 +83,10 @@ def get_next_input_source_index(index, indexes):
 def handle_primary_hotkey():
     primary_indexes = get_splitted_indexes()[0]
 
-    if state.current_index in primary_indexes:
-        next_index = get_next_input_source_index(state.current_index, primary_indexes)
-    else:
+    if state.current_index not in primary_indexes and state.primary_index in primary_indexes:
         next_index = state.primary_index
+    else:
+        next_index = get_next_input_source_index(state.current_index, primary_indexes)
 
     activate_input_source(next_index)
     state.current_index = next_index
@@ -96,10 +96,10 @@ def handle_primary_hotkey():
 def handle_secondary_hotkey():
     secondary_indexes = get_splitted_indexes()[1]
 
-    if state.current_index in secondary_indexes:
-        next_index = get_next_input_source_index(state.current_index, secondary_indexes)
-    else:
+    if state.current_index not in secondary_indexes and state.secondary_index in secondary_indexes:
         next_index = state.secondary_index
+    else:
+        next_index = get_next_input_source_index(state.current_index, secondary_indexes)
 
     activate_input_source(next_index)
     state.current_index = next_index
