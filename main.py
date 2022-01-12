@@ -69,28 +69,28 @@ def get_next_input_source_index(index, indexes):
 
 
 def activate_next_primary_input_source():
-    index = get_current_input_source_index()
     primary_indexes = get_splitted_indexes()[0]
 
-    if index in primary_indexes:
-        next_index = get_next_input_source_index(index, primary_indexes)
+    if state.current_index in primary_indexes:
+        next_index = get_next_input_source_index(state.current_index, primary_indexes)
     else:
         next_index = state.primary_index
 
     activate_input_source(next_index)
+    state.current_index = next_index
     state.primary_index = next_index
 
 
 def activate_next_secondary_input_source():
-    index = get_current_input_source_index()
     secondary_indexes = get_splitted_indexes()[1]
 
-    if index in secondary_indexes:
-        next_index = get_next_input_source_index(index, secondary_indexes)
+    if state.current_index in secondary_indexes:
+        next_index = get_next_input_source_index(state.current_index, secondary_indexes)
     else:
         next_index = state.secondary_index
 
     activate_input_source(next_index)
+    state.current_index = next_index
     state.secondary_index = next_index
 
 
@@ -122,6 +122,7 @@ def handler(reply):
 
 class state:
     pressed = set()
+    current_index = 0
     primary_index = 0
     secondary_index = 0
 
@@ -163,6 +164,7 @@ def init():
             f"First 2 languages ({str(primary_langs).strip('[]')}) are used as primary."
         )
 
+    state.current_index = get_current_input_source_index()
     primary_indexes, secondry_indexes = get_splitted_indexes()
     state.primary_index = primary_indexes[0]
     state.secondary_index = secondry_indexes[0]
