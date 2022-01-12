@@ -60,24 +60,38 @@ def get_current_input_source_index():
     )
 
 
-def activate_next_input_source(indexes):
-    index = get_current_input_source_index()
+def get_next_input_source_index(index, indexes):
     try:
         pos = indexes.index(index)
-        next_index = indexes[pos + 1]
+        return indexes[pos + 1]
     except (ValueError, IndexError):
-        next_index = indexes[0]
-    activate_input_source(next_index)
+        return indexes[0]
 
 
 def activate_next_primary_input_source():
+    index = get_current_input_source_index()
     primary_indexes = get_splitted_indexes()[0]
-    activate_next_input_source(primary_indexes)
+
+    if index in primary_indexes:
+        next_index = get_next_input_source_index(index, primary_indexes)
+    else:
+        next_index = state.primary_index
+
+    activate_input_source(next_index)
+    state.primary_index = next_index
 
 
 def activate_next_secondary_input_source():
+    index = get_current_input_source_index()
     secondary_indexes = get_splitted_indexes()[1]
-    activate_next_input_source(secondary_indexes)
+
+    if index in secondary_indexes:
+        next_index = get_next_input_source_index(index, secondary_indexes)
+    else:
+        next_index = state.secondary_index
+
+    activate_input_source(next_index)
+    state.secondary_index = next_index
 
 
 bindings = {
@@ -95,20 +109,25 @@ def handler(reply):
         )
 
         if event.type == X.KeyPress:
-            pressed.add(event.detail)
+            state.pressed.add(event.detail)
 
             for hotkey, func in bindings.items():
-                if pressed == hotkey:
+                if state.pressed == hotkey:
                     func()
 
         elif event.type == X.KeyRelease:
-            if event.detail in pressed:
-                pressed.remove(event.detail)
+            if event.detail in state.pressed:
+                state.pressed.remove(event.detail)
+
+
+class state:
+    pressed = set()
+    primary_index = 0
+    secondary_index = 0
 
 
 display = Display()  # get current display
 bus = SessionBus()
-pressed = set()
 primary_langs = []
 
 
@@ -125,7 +144,7 @@ def init():
     )
     args = parser.parse_args(sys.argv[1:])
     if args.primary:
-        primary_langs = re.split('\s*,\s*', args.primary)
+        primary_langs = re.split("\s*,\s*", args.primary)
         unexisted_langs = set(primary_langs) - set(get_input_sources().keys())
         if unexisted_langs:
             print(
@@ -135,10 +154,18 @@ def init():
                 file=sys.stderr,
             )
             sys.exit(1)
-        print(f"Provided languages ({str(primary_langs).strip('[]')}) are used as primary.")
+        print(
+            f"Provided languages ({str(primary_langs).strip('[]')}) are used as primary."
+        )
     else:
         primary_langs = list(get_input_sources().keys())[:2]
-        print(f"First 2 languages ({str(primary_langs).strip('[]')}) are used as primary.")
+        print(
+            f"First 2 languages ({str(primary_langs).strip('[]')}) are used as primary."
+        )
+
+    primary_indexes, secondry_indexes = get_splitted_indexes()
+    state.primary_index = primary_indexes[0]
+    state.secondary_index = secondry_indexes[0]
 
     # Monitor keypress and button press
     ctx = display.record_create_context(
