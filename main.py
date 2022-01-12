@@ -17,6 +17,18 @@ class Keys:
     shift_r = 62
 
 
+class state:
+    pressed = set()
+    current_index = 0
+    primary_index = 0
+    secondary_index = 0
+
+
+display = Display()  # get current display
+bus = SessionBus()
+primary_langs = []
+
+
 def gnome_shell_eval(code):
     remote_object = bus.get("org.gnome.Shell", "/org/gnome/Shell")
     result = remote_object.Eval(code)
@@ -68,7 +80,7 @@ def get_next_input_source_index(index, indexes):
         return indexes[0]
 
 
-def activate_next_primary_input_source():
+def handle_primary_hotkey():
     primary_indexes = get_splitted_indexes()[0]
 
     if state.current_index in primary_indexes:
@@ -81,7 +93,7 @@ def activate_next_primary_input_source():
     state.primary_index = next_index
 
 
-def activate_next_secondary_input_source():
+def handle_secondary_hotkey():
     secondary_indexes = get_splitted_indexes()[1]
 
     if state.current_index in secondary_indexes:
@@ -95,12 +107,12 @@ def activate_next_secondary_input_source():
 
 
 bindings = {
-    frozenset([Keys.alt_l, Keys.shift_l]): activate_next_primary_input_source,
-    frozenset([Keys.alt_r, Keys.shift_r]): activate_next_secondary_input_source,
+    frozenset([Keys.alt_l, Keys.shift_l]): handle_primary_hotkey,
+    frozenset([Keys.alt_r, Keys.shift_r]): handle_secondary_hotkey,
 }
 
 
-def handler(reply):
+def handle_xlib_events(reply):
     """This function is called when a xlib event is fired"""
     data = reply.data
     while len(data):
@@ -120,19 +132,7 @@ def handler(reply):
                 state.pressed.remove(event.detail)
 
 
-class state:
-    pressed = set()
-    current_index = 0
-    primary_index = 0
-    secondary_index = 0
-
-
-display = Display()  # get current display
-bus = SessionBus()
-primary_langs = []
-
-
-def init():
+def parse_cli_args():
     global primary_langs
 
     parser = argparse.ArgumentParser()
@@ -164,11 +164,15 @@ def init():
             f"First 2 languages ({str(primary_langs).strip('[]')}) are used as primary."
         )
 
+
+def load_state():
     state.current_index = get_current_input_source_index()
     primary_indexes, secondry_indexes = get_splitted_indexes()
     state.primary_index = primary_indexes[0]
     state.secondary_index = secondry_indexes[0]
 
+
+def monitor_xlib_events():
     # Monitor keypress and button press
     ctx = display.record_create_context(
         0,
@@ -187,12 +191,15 @@ def init():
             }
         ],
     )
-    display.record_enable_context(ctx, handler)
+    display.record_enable_context(ctx, handle_xlib_events)
     display.record_free_context(ctx)
 
-
-if __name__ == "__main__":
-    init()
     while 1:
         # Infinite wait, doesn't do anything as no events are grabbed
         event = display.screen().root.display.next_event()
+
+
+if __name__ == "__main__":
+    parse_cli_args()
+    load_state()
+    monitor_xlib_events()
